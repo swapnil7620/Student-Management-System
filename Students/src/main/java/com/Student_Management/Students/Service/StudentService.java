@@ -1,6 +1,7 @@
 package com.Student_Management.Students.Service;
 
-
+import com.Student_Management.Students.kafka.StudentKafkaDTO;
+import com.Student_Management.Students.kafka.StudentProducer;
 import com.Student_Management.Students.DTO.StudentRequestDTO;
 import com.Student_Management.Students.DTO.StudentResponseDTO;
 import com.Student_Management.Students.DTO.StudentUpdateDTO;
@@ -20,11 +21,14 @@ public class StudentService {
     private  final StudentRepository studentRepository;
     private  final StanderdRepository standerdRepository;
     private  final DivisionRepository divisionRepository;
+    private final StudentProducer studentProducer;
 
-    public StudentService(StudentRepository studentRepository, StanderdRepository standerdRepository, DivisionRepository divisionRepository) {
+    public StudentService(StudentRepository studentRepository, StanderdRepository standerdRepository, DivisionRepository divisionRepository,StudentProducer studentProducer) {
+
         this.studentRepository = studentRepository;
         this.standerdRepository = standerdRepository;
         this.divisionRepository = divisionRepository;
+        this.studentProducer = studentProducer;
     }
     // create
     public StudentResponseDTO create(StudentRequestDTO dto) {
@@ -51,6 +55,16 @@ public class StudentService {
 
         Student saved = studentRepository.save(student);
 
+        StudentKafkaDTO kafkaDTO = new StudentKafkaDTO();
+
+        kafkaDTO.setName(saved.getName());
+        kafkaDTO.setEmail(saved.getEmail());
+        kafkaDTO.setPhone(saved.getPhone());
+        kafkaDTO.setDivisionCode(saved.getDivision().getCode());
+        kafkaDTO.setStanderdStandard(saved.getStanderd().getStandard());
+
+        studentProducer.sendStudent(kafkaDTO);
+
         return new StudentResponseDTO(
                 saved.getId(),
                 saved.getName(),
@@ -61,7 +75,10 @@ public class StudentService {
                 saved.getDivision().getCode(),
                 saved.getStanderd().getId(),
                 saved.getStanderd().getStandard()
+
         );
+
+
     }
   // get all student
     public List<StudentResponseDTO> getAll() {
