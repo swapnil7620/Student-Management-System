@@ -1,3 +1,4 @@
+/*
 package com.Student_Management.Students.config;
 
 import com.Student_Management.Students.kafka.StudentKafkaDTO;
@@ -33,3 +34,4 @@ public class KafkaProducerConfig {
         return new KafkaTemplate<>(producerFactory());
     }
 }
+*/

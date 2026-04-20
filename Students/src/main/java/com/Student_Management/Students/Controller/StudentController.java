@@ -1,6 +1,7 @@
 package com.Student_Management.Students.Controller;
 
 
+import com.Student_Management.Students.DTO.PageResponseDTO;
 import com.Student_Management.Students.DTO.StudentRequestDTO;
 import com.Student_Management.Students.DTO.StudentResponseDTO;
 import com.Student_Management.Students.DTO.StudentUpdateDTO;
@@ -36,6 +37,14 @@ public class StudentController {
     @GetMapping("/getAll")
     public ResponseEntity<List<StudentResponseDTO>> getAll() {
         return ResponseEntity.ok(studentService.getAll());
+    }
+
+
+    @GetMapping("/page/{page}/size/{size}")
+    public ResponseEntity<PageResponseDTO<StudentResponseDTO>> getAsPages(
+            @PathVariable int page,
+            @PathVariable int size) {
+        return ResponseEntity.ok(studentService.getAllPaginated(page, size));
     }
 
     // GET BY ID

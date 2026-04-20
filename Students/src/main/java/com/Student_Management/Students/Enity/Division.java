@@ -18,7 +18,6 @@ public class Division {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-
     @Column(nullable = false,unique = true)
     private Integer code;
 

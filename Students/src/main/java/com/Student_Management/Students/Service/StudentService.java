@@ -1,5 +1,6 @@
 package com.Student_Management.Students.Service;
 
+import com.Student_Management.Students.DTO.PageResponseDTO;
 import com.Student_Management.Students.kafka.StudentKafkaDTO;
 import com.Student_Management.Students.kafka.StudentProducer;
 import com.Student_Management.Students.DTO.StudentRequestDTO;
@@ -11,7 +12,11 @@ import com.Student_Management.Students.Enity.Student;
 import com.Student_Management.Students.Repository.DivisionRepository;
 import com.Student_Management.Students.Repository.StanderdRepository;
 import com.Student_Management.Students.Repository.StudentRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 
@@ -31,6 +36,10 @@ public class StudentService {
         this.studentProducer = studentProducer;
     }
     // create
+
+
+    @Value("${billing.event.enabled}")
+    private boolean billingEventEnabled;
     public StudentResponseDTO create(StudentRequestDTO dto) {
 
         Standerd standerd = standerdRepository
@@ -55,15 +64,22 @@ public class StudentService {
 
         Student saved = studentRepository.save(student);
 
-        StudentKafkaDTO kafkaDTO = new StudentKafkaDTO();
+        //  save students
 
+        StudentKafkaDTO kafkaDTO = new StudentKafkaDTO();
+        kafkaDTO.setStudentId(saved.getId());
         kafkaDTO.setName(saved.getName());
         kafkaDTO.setEmail(saved.getEmail());
         kafkaDTO.setPhone(saved.getPhone());
         kafkaDTO.setDivisionCode(saved.getDivision().getCode());
         kafkaDTO.setStanderdStandard(saved.getStanderd().getStandard());
 
-        studentProducer.sendStudent(kafkaDTO);
+        if (billingEventEnabled) {
+            studentProducer.sendStudent(kafkaDTO);
+            System.out.println("Kafka event sent to Billing Service");
+        } else {
+            System.out.println("Kafka event disabled");
+        }
 
         return new StudentResponseDTO(
                 saved.getId(),
@@ -97,6 +113,38 @@ public class StudentService {
                         student.getStanderd().getStandard()
                 ))
                 .toList();
+    }
+
+// Pagination
+    public PageResponseDTO<StudentResponseDTO> getAllPaginated(int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Student> studentPage = studentRepository.findAllWithRelations(pageable);
+
+        List<StudentResponseDTO> students = studentPage.getContent()
+                .stream()
+                .map(student -> new StudentResponseDTO(
+                        student.getId(),
+                        student.getName(),
+                        student.getEmail(),
+                        student.getPhone(),
+                        student.getActive(),
+                        student.getDivision().getId(),
+                        student.getDivision().getCode(),
+                        student.getStanderd().getId(),
+                        student.getStanderd().getStandard()
+                ))
+                .toList();
+
+        return new PageResponseDTO<>(
+                students,
+                studentPage.getNumber(),
+                studentPage.getSize(),
+                studentPage.getTotalElements(),
+                studentPage.getTotalPages(),
+                studentPage.isLast()
+        );
     }
 
     // get by ID
